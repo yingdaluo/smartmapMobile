@@ -17,7 +17,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -185,10 +184,8 @@ public class CreateGroupActivity extends Activity {
 					{
 						//	Launching new Activity on selecting single List Item
 						String ownerAccount = ((SmartMapApplication)getApplication()).getUser().getId();
-						Bitmap bm = BitmapFactory.decodeResource(getResources(), 
-								imageAdapter.mThumbIds[grid_column_id]);
 						Group newGroup = new Group();
-						newGroup.setGroupThumnail(bm);
+						newGroup.setGroupThumnail(imageAdapter.mThumbIds[grid_column_id]);
 						EditText edText = (EditText)findViewById(R.id.enter_group_name);
 						String groupNameString = (edText.getText().toString() == null ||
 								edText.getText().toString().equals(""))?
@@ -198,7 +195,7 @@ public class CreateGroupActivity extends Activity {
 
 						GroupDAO groupDAO = new GroupDAO(new DBHelper(getApplicationContext()));
 						RelationDAO relationDAO = new RelationDAO(new DBHelper(getApplicationContext()));
-						groupDAO.createGroup(newGroup);
+						groupDAO.createGroup(newGroup, true);
 						List<GraphUser> selectedUsers = ((SmartMapApplication)getApplication())
 								.getSelectedUsers();
 						if(selectedUsers!=null){
@@ -207,7 +204,7 @@ public class CreateGroupActivity extends Activity {
 								GroupUserRelation relation = new GroupUserRelation();
 								relation.setGroupName(groupNameString);
 								relation.setUserAccount(userAccount);
-								relationDAO.createRelation(relation);
+								relationDAO.createRelation(relation,true);
 							}
 						}
 

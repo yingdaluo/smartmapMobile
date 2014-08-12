@@ -6,7 +6,16 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
 public class MySQLiteHelper extends SQLiteOpenHelper {
+	private static MySQLiteHelper instance;
 
+    public static synchronized MySQLiteHelper getInstance(Context context)
+    {
+        if (instance == null)
+            instance = new MySQLiteHelper(context);
+        return instance;
+    }
+    
+	public static SQLiteDatabase database;
 	private static final String DATABASE_NAME = "smartmap.db";
 	private static final int DATABASE_VERSION = 1;
 
@@ -14,10 +23,14 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 	public static final String TABLE_USER = "smartmap_user";
 	public static final String TABLE_USER_COLUMN_USERNAME = "username";
 	public static final String TABLE_USER_COLUMN_FACEBOOKACCOUNT = "facebookAccount";
+	public static final String TABLE_USER_COLUMN_LATITUDE = "latitude";
+	public static final String TABLE_USER_COLUMN_LONGITUDE = "longitude";
 	private static final String TABLE_USER_CREATE = "create table IF NOT EXISTS "
 			+ TABLE_USER + "(" + TABLE_USER_COLUMN_FACEBOOKACCOUNT
 			+ " text primary key, " + TABLE_USER_COLUMN_USERNAME
-			+ " text not null);";
+			+ " text not null, "+TABLE_USER_COLUMN_LATITUDE
+			+ " text, "+TABLE_USER_COLUMN_LONGITUDE
+			+ " text);";
 
 	//Informations for group table.
 	public static final String TABLE_GROUP = "smartmap_group";
@@ -30,22 +43,25 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 			+ " integer primary key autoincrement, " + TABLE_GROUP_COLUMN_GROUPNAME
 			+ " text not null,"+ TABLE_GROUP_COLUMN_OWNERACCOUNT
 			+ " text not null,"+ TABLE_GROUP_COLUMN_THUMBNAIL
-			+ " BLOB);";
+			+ " text not null);";
 	//Informations for group table.
 	public static final String TABLE_RELATION = "smartmap_group_user_relation";
-	public static final String TABLE_RELATION_COLUMN_ID = "id";
 	public static final String TABLE_RELATION_COLUMN_GROUPNAME = "groupName";
 	public static final String TABLE_RELATION_COLUMN_USERACCOUNT = "userAccount";
+	// + TABLE_RELATION_COLUMN_ID + " integer primary key autoincrement, " + 
 	private static final String TABLE_RELATION_CREATE = "create table IF NOT EXISTS "
-			+ TABLE_RELATION + "(" + TABLE_RELATION_COLUMN_ID
-			+ " integer primary key autoincrement, " + TABLE_RELATION_COLUMN_GROUPNAME
+			+ TABLE_RELATION + "("+TABLE_RELATION_COLUMN_GROUPNAME
 			+ " text not null,"+ TABLE_RELATION_COLUMN_USERACCOUNT
-			+ " text not null);";
+			+ " text not null, "
+			+ " PRIMARY KEY ( "+TABLE_RELATION_COLUMN_GROUPNAME+", "+TABLE_RELATION_COLUMN_USERACCOUNT+"));";
 
 
 
 	public MySQLiteHelper(Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
+		if(MySQLiteHelper.database == null){
+			MySQLiteHelper.database = this.getWritableDatabase();
+		}
 	}
 
 	@Override

@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import models.Group;
 import models.GroupUserRelation;
+import models.User;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -17,7 +19,6 @@ import org.json.JSONObject;
 import util.DBHelper;
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -28,17 +29,14 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.facebook.HttpMethod;
-import com.facebook.Request;
-import com.facebook.Response;
-import com.facebook.Session;
-import com.facebook.SessionState;
 import com.facebook.UiLifecycleHelper;
 import com.facebook.model.GraphObject;
 import com.facebook.model.GraphUser;
+import com.facebook.widget.FacebookDialog;
 
 import dao.GroupDAO;
 import dao.RelationDAO;
+import dao.UserDAO;
 
 public class GroupInfoActivity extends Activity{
 	Group group;
@@ -47,19 +45,12 @@ public class GroupInfoActivity extends Activity{
 	private GraphUser user; 
 	private List<BaseListElement> listElements;
 	private UiLifecycleHelper uiHelper;
-	private Session.StatusCallback callback = 
-			new Session.StatusCallback() {
-		@Override
-		public void call(Session session, 
-				SessionState state, Exception exception) {
-		}
-	};
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		this.setContentView(R.layout.group_info_view);
 
-		uiHelper = new UiLifecycleHelper(this, callback);
+		uiHelper = new UiLifecycleHelper(this, null);
 		uiHelper.onCreate(savedInstanceState);
 
 		// Set up the list view items, based on a list of
@@ -83,6 +74,16 @@ public class GroupInfoActivity extends Activity{
 
 		GroupDAO groupDAO = new GroupDAO(new DBHelper(getApplicationContext()));
 		group = groupDAO.getGroupByName(groupName);
+		TextView txtGroupOwner = (TextView) findViewById(R.id.group_owner);
+		
+		String userAccount = group.getOwnerAccount();
+		if(userAccount.length()>0){
+			User usr = new UserDAO(new DBHelper(getApplicationContext())).getUserByAccount(userAccount);
+			txtGroupOwner.setText(usr.getUsername());
+		}else {
+			txtGroupOwner.setText("Not known");
+		}
+		
 		Button leaveGroupButton = (Button) findViewById(R.id.leave_group);
 		Button deleteGroupButton = (Button) findViewById(R.id.delete_group);
 		ViewGroup layout = (ViewGroup) leaveGroupButton.getParent();
@@ -97,7 +98,7 @@ public class GroupInfoActivity extends Activity{
 					Intent i = getIntent();
 					String groupName = i.getStringExtra("group_name");
 					GroupDAO groupDAO = new GroupDAO(new DBHelper(getApplicationContext()));
-					groupDAO.deleteGroupByName(groupName);
+					groupDAO.deleteGroupByName(groupName, true);
 					finish();
 				} 
 			}); 
@@ -112,7 +113,7 @@ public class GroupInfoActivity extends Activity{
 					Intent i = getIntent();
 					String groupName = i.getStringExtra("group_name");
 					RelationDAO relationDAO = new RelationDAO(new DBHelper(getApplicationContext()));
-					relationDAO.deleteRelation(groupName, user.getId());
+					relationDAO.deleteRelation(groupName, user.getId(),true);
 					finish();
 				} 
 			}); 
@@ -120,9 +121,9 @@ public class GroupInfoActivity extends Activity{
 
 
 		ImageView imageView  = (ImageView)findViewById(R.id.imageView1);
-		Bitmap groupThumbnail = group.getGroupThumnail();
+		int groupThumbnail = group.getGroupThumnail();
 
-		imageView.setImageBitmap(groupThumbnail);
+		imageView.setImageResource(groupThumbnail);
 
 		Button shareFBButton = (Button) findViewById(R.id.share_group);
 		shareFBButton.setOnClickListener(new OnClickListener()
@@ -130,28 +131,32 @@ public class GroupInfoActivity extends Activity{
 			@Override
 			public void onClick(View v)
 			{
-				Bundle params = new Bundle();
-				params.putString("type", "product.group");
-				params.putString("url", "http://samples.ogp.me/612465388810648");
-				params.putString("title", group.getGroupName());
-				params.putString("description", "Nothing");
+				HashSet<String> userIds = new RelationDAO(new DBHelper(getApplicationContext())).getUserIdsByGroup(group.getGroupName());
+				List<String> userAccounts = new ArrayList<String>(userIds);
+				if (FacebookDialog.canPresentShareDialog(getApplicationContext(), 
+						FacebookDialog.ShareDialogFeature.SHARE_DIALOG)) {
+					// Publish the post using the Share Dialog
+					FacebookDialog shareDialog = new FacebookDialog.ShareDialogBuilder(GroupInfoActivity.this)
+					.setLink("https://github.com/yingdaluo/smartmapMobile")
+					.setApplicationName("SmartMap")
+					.setDescription("I am right now in group:"+group.getGroupName()+" in SmartMap!")
+					.setName(group.getGroupName())
+					.setFriends(userAccounts)
+					.build();
+					uiHelper.trackPendingDialogCall(shareDialog.present());
 
-				Request request = new Request(
-						Session.getActiveSession(),
-						"me/objects/product.group",
-						params,
-						HttpMethod.POST
-						);
-				Response response =		request.executeAndWait();
-				System.out.println(response);
+				} else {
+					// Fallback. For example, publish the post using the Feed Dialog
+				}
+				
 			} 
 		});
-		
+
 		Button inviteButton = (Button) findViewById(R.id.invite_members);
 		BaseListElement listElement = listElements.get(0);
 		inviteButton.setOnClickListener(listElement.getOnClickListener());
-		
-		
+
+
 		Button showMemberButton = (Button) findViewById(R.id.show_members);
 		showMemberButton.setOnClickListener(new OnClickListener()
 		{
@@ -174,7 +179,17 @@ public class GroupInfoActivity extends Activity{
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
-		uiHelper.onActivityResult(requestCode, resultCode, data);
+		uiHelper.onActivityResult(requestCode, resultCode, data, new FacebookDialog.Callback() {
+			@Override
+			public void onError(FacebookDialog.PendingCall pendingCall, Exception error, Bundle data) {
+				Log.e("Activity", String.format("Error: %s", error.toString()));
+			}
+
+			@Override
+			public void onComplete(FacebookDialog.PendingCall pendingCall, Bundle data) {
+				Log.i("Activity", "Success!");
+			}
+		});
 		if (requestCode == REAUTH_ACTIVITY_CODE) {
 			uiHelper.onActivityResult(requestCode, resultCode, data);
 		} else if (resultCode == Activity.RESULT_OK && 
@@ -207,11 +222,6 @@ public class GroupInfoActivity extends Activity{
 		super.onDestroy();
 		uiHelper.onDestroy();
 	}
-
-
-
-
-
 
 	private class PeopleListElement extends BaseListElement {
 		private List<GraphUser> selectedUsers;
@@ -282,7 +292,7 @@ public class GroupInfoActivity extends Activity{
 				GroupUserRelation relation = new GroupUserRelation();
 				relation.setGroupName(groupNameString);
 				relation.setUserAccount(userAccount);
-				relationDAO.createRelation(relation);
+				relationDAO.createRelation(relation, true);
 			}
 		}
 		private List<GraphUser> restoreByteArray(byte[] bytes) {

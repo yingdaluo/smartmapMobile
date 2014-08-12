@@ -1,11 +1,10 @@
 package models;
 
-import android.graphics.Bitmap;
 
 public class Group {
 	private int id;
 	private String groupName;
-	private Bitmap groupThumnail;
+	private int groupThumnail;
 	private String ownerAccount;
 	
 	public int getId() {
@@ -20,10 +19,10 @@ public class Group {
 	public void setGroupName(String groupName) {
 		this.groupName = groupName;
 	}
-	public Bitmap getGroupThumnail() {
+	public int getGroupThumnail() {
 		return groupThumnail;
 	}
-	public void setGroupThumnail(Bitmap groupThumnail) {
+	public void setGroupThumnail(int groupThumnail) {
 		this.groupThumnail = groupThumnail;
 	}
 	public String getOwnerAccount() {

@@ -8,6 +8,7 @@ import com.facebook.model.GraphUser;
 
 public class SmartMapApplication extends Application {
 	private List<GraphUser> selectedUsers;
+	private GraphUser user;
 	public List<GraphUser> getSelectedUsers() {
 	    return selectedUsers;
 	}
@@ -24,6 +25,6 @@ public class SmartMapApplication extends Application {
 		this.user = user;
 	}
 
-	private GraphUser user;
+	public String groupName = null;
 	
 }

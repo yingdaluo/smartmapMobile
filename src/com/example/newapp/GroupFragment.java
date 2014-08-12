@@ -1,6 +1,5 @@
 package com.example.newapp;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import models.Group;
@@ -14,11 +13,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+
 import com.facebook.model.GraphUser;
 
 import dao.RelationDAO;
@@ -27,11 +26,6 @@ import dao.RelationDAO;
  * A placeholder fragment containing a simple view.
  */
 public class GroupFragment extends ListFragment {
-	/**
-	 * The fragment argument representing the section number for this
-	 * fragment.
-	 */
-	private ListView listView1;
 	// ListView Adapter
 	GroupListAdapter adapter;
 	List<Group> groupList ;
@@ -65,7 +59,9 @@ public class GroupFragment extends ListFragment {
 
 		RelationDAO relationDAO = new RelationDAO(new DBHelper(getActivity()));
 		GraphUser user = ((SmartMapApplication)getActivity().getApplication()).getUser();
-
+		if(user == null){
+			return ;
+		}
 		groupList = relationDAO.findGroupsByUserAccount(user.getId());
 		//groupNames = new ArrayList<String>(groupList.size());
 		//		for (int i = 0; i < groupList.size(); i++) {
@@ -89,7 +85,7 @@ public class GroupFragment extends ListFragment {
 				adapter.notifyDataSetChanged();
 			}
 		};
-		//getActivity().runOnUiThread(listRefresherRunnable);
+		getActivity().runOnUiThread(listRefresherRunnable);
 	}
 
 	@Override
@@ -102,19 +98,16 @@ public class GroupFragment extends ListFragment {
 			@Override
 			public void onTextChanged(CharSequence cs, int arg1, int arg2, int arg3) {
 				// When user changed the Text
-				//adapter.getFilter().filter(cs);   
+				adapter.getFilter().filter(cs);   
 			}
 
 			@Override
 			public void beforeTextChanged(CharSequence arg0, int arg1, int arg2,
 					int arg3) {
-				// TODO Auto-generated method stub
 
 			}
-
 			@Override
 			public void afterTextChanged(Editable arg0) {
-				// TODO Auto-generated method stub                          
 			}
 		});
 
@@ -130,7 +123,7 @@ public class GroupFragment extends ListFragment {
 				startActivity(i);
 			} 
 		}); 
-		//getActivity().runOnUiThread(listRefresherRunnable);
+		getActivity().runOnUiThread(listRefresherRunnable);
 		return rootView;
 	}
 	@Override

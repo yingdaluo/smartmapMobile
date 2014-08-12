@@ -2,13 +2,11 @@ package com.example.newapp;
 
 import java.util.Locale;
 
-import util.MySQLiteHelper;
 import android.app.ActionBar;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.Intent;
-import android.database.sqlite.SQLiteDatabase;
 import android.support.v13.app.FragmentPagerAdapter;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
@@ -94,7 +92,12 @@ public class MajorTabsActivity extends FragmentActivity implements ActionBar.Tab
 			i.putExtra("settings", 1);
 			startActivity(i);
 			return true;
+		}else if(id == R.id.action_select_group) {
+			Intent i = new Intent(getApplicationContext(), ChooseMapActivity.class);
+			startActivityForResult(i, 1);
+			return true;
 		}
+		
 		return super.onOptionsItemSelected(item);
 	}
 
@@ -131,13 +134,10 @@ public class MajorTabsActivity extends FragmentActivity implements ActionBar.Tab
 			Fragment fragment; 
 			switch(position){
 			case 0:
-				fragment = new GroupFragment(1);
+				fragment = new SmartMapFragment(1);
 				break;
 			case 1:
 				fragment = new GroupFragment(2);
-				break;
-			case 2:
-				fragment = new GroupFragment(3);
 				break;
 			default:
 				throw new IllegalArgumentException("Invalid section number");
@@ -148,7 +148,7 @@ public class MajorTabsActivity extends FragmentActivity implements ActionBar.Tab
 		@Override
 		public int getCount() {
 			// Show 3 total pages.
-			return 3;
+			return 2;
 		}
 
 		@Override
@@ -159,8 +159,6 @@ public class MajorTabsActivity extends FragmentActivity implements ActionBar.Tab
 				return getString(R.string.title_section1).toUpperCase(l);
 			case 1:
 				return getString(R.string.title_section2).toUpperCase(l);
-			case 2:
-				return getString(R.string.title_section3).toUpperCase(l);
 			}
 			return null;
 		}

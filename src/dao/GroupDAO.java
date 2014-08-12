@@ -2,8 +2,16 @@ package dao;
 
 
 
+import http.HttpClient;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+
 import models.Group;
-import util.Helper;
+import models.GroupUserRelation;
 import util.MySQLiteHelper;
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -16,28 +24,47 @@ public class GroupDAO {
 		this.dbHelper = dbHelper;
 	}
 
-	public void createGroup(Group group) {
-		SQLiteDatabase db = dbHelper.getWritableDatabase();
+	public void createGroup(Group group, boolean update) {
 		ContentValues values = new ContentValues();
 		values.put(MySQLiteHelper.TABLE_GROUP_COLUMN_GROUPNAME, group.getGroupName()); // Group Name
 		values.put(MySQLiteHelper.TABLE_GROUP_COLUMN_OWNERACCOUNT,group.getOwnerAccount()); // 
-		values.put(MySQLiteHelper.TABLE_GROUP_COLUMN_THUMBNAIL, Helper.bitMapToByteArray(group.getGroupThumnail()));
+		values.put(MySQLiteHelper.TABLE_GROUP_COLUMN_THUMBNAIL, group.getGroupThumnail());
 		// Inserting Row
-		db.insert(MySQLiteHelper.TABLE_GROUP, null, values);
+		SQLiteDatabase database = dbHelper.getWritableDatabase();
+		database.replace(MySQLiteHelper.TABLE_GROUP, null, values);
 
-		ContentValues relationValues = new ContentValues();
-		relationValues.put(MySQLiteHelper.TABLE_RELATION_COLUMN_GROUPNAME, group.getGroupName()); // Group Name
-		relationValues.put(MySQLiteHelper.TABLE_RELATION_COLUMN_USERACCOUNT,group.getOwnerAccount()); // 
-		db.insert(MySQLiteHelper.TABLE_RELATION, null, relationValues);
+		RelationDAO relationDAO = new RelationDAO(dbHelper);
+		GroupUserRelation relation = new GroupUserRelation();
+		relation.setGroupName(group.getGroupName());
+		relation.setUserAccount(group.getOwnerAccount());
+		relationDAO.createRelation(relation, update);
 
-		db.close(); // Closing database connection
+		if(update){
+			final Group grouptoPost = group;
+			Thread thread = new Thread(new Runnable(){
+				@Override
+				public void run() {
+					try {
+						List<NameValuePair> nameValuePairs  = new ArrayList<NameValuePair>(2);
+						nameValuePairs.add(new BasicNameValuePair("method", "CREATE_GROUP"));
+						nameValuePairs.add(new BasicNameValuePair(MySQLiteHelper.TABLE_GROUP_COLUMN_OWNERACCOUNT, grouptoPost.getOwnerAccount()));
+						nameValuePairs.add(new BasicNameValuePair(MySQLiteHelper.TABLE_GROUP_COLUMN_GROUPNAME, grouptoPost.getGroupName()));
+						nameValuePairs.add(new BasicNameValuePair(MySQLiteHelper.TABLE_GROUP_COLUMN_THUMBNAIL, String.valueOf(grouptoPost.getGroupThumnail())));
+						HttpClient.postData(nameValuePairs);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			});
+			thread.start();
+		}
+		//database.close();
 	}
 
 	public Group getGroupByName(String groupName) {
 		// Select All Query
-		//String selectQuery = "SELECT  * FROM " + MySQLiteHelper.TABLE_GROUP + " WHERE groupName = " + groupName;
-		SQLiteDatabase db = dbHelper.getWritableDatabase();
-		Cursor cursor = db.query(MySQLiteHelper.TABLE_GROUP,
+		SQLiteDatabase database = dbHelper.getWritableDatabase();
+		Cursor cursor = database.query(MySQLiteHelper.TABLE_GROUP,
 				new String[] {MySQLiteHelper.TABLE_GROUP_COLUMN_ID,MySQLiteHelper.TABLE_GROUP_COLUMN_GROUPNAME,MySQLiteHelper.TABLE_GROUP_COLUMN_OWNERACCOUNT,MySQLiteHelper.TABLE_GROUP_COLUMN_THUMBNAIL},
 				MySQLiteHelper.TABLE_GROUP_COLUMN_GROUPNAME +"= '"+groupName+"'", null, null, null, null);
 		Group group = new Group();
@@ -49,26 +76,44 @@ public class GroupDAO {
 					group.setGroupName(cursor.getString(1));
 					group.setOwnerAccount(cursor.getString(2));
 					// Adding Group to list
-					group.setGroupThumnail(Helper.byteArrayToBitmap(cursor.getBlob(3)));
+					group.setGroupThumnail(Integer.parseInt(cursor.getString(3)));
 					break;
 				}
 				cursor.moveToNext();
 			};
 		}
+		//database.close();
 		// return Group list
 		return group;
 	}
 
-
-	public void deleteGroupByName(String groupName) {
-		Group group = getGroupByName(groupName);
+	public void deleteGroupByName(String groupName, boolean update) {
 		SQLiteDatabase database = dbHelper.getWritableDatabase();
+		Group group = getGroupByName(groupName);
 		database.delete(MySQLiteHelper.TABLE_GROUP, MySQLiteHelper.TABLE_GROUP_COLUMN_ID
 				+ " = " + group.getId(), null);
 
 		database.delete(MySQLiteHelper.TABLE_RELATION, MySQLiteHelper.TABLE_RELATION_COLUMN_GROUPNAME
 				+ " = '" + group.getGroupName()+"'", null);
-		database.close();
+		//database.close();
+
+		if(update){
+			final Group grouptoPost = group;
+			Thread thread = new Thread(new Runnable(){
+				@Override
+				public void run() {
+					try {
+						List<NameValuePair> nameValuePairs  = new ArrayList<NameValuePair>(2);
+						nameValuePairs.add(new BasicNameValuePair("method", "DELETE_GROUP"));
+						nameValuePairs.add(new BasicNameValuePair(MySQLiteHelper.TABLE_GROUP_COLUMN_GROUPNAME, grouptoPost.getGroupName()));
+						HttpClient.postData(nameValuePairs);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			});
+			thread.start();
+		}
 	}
 
 }

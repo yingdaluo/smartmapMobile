@@ -7,5 +7,10 @@
         android:orderInCategory="100"
         android:showAsAction="never"
         android:title="@string/action_settings"/>
+    <item
+        android:id="@+id/action_select_group"
+        android:orderInCategory="100"
+        android:showAsAction="never"
+        android:title="@string/select_group"/>
 
 </menu>

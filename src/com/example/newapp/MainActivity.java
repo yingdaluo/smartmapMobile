@@ -17,10 +17,13 @@ import com.facebook.SessionState;
 import com.facebook.UiLifecycleHelper;
 import com.facebook.model.GraphUser;
 
+import dao.DBUpdater;
 import dao.UserDAO;
 
 public class MainActivity extends FragmentActivity {
 	MySQLiteHelper sqlLiteHelper;
+	DBUpdater updater;
+	Thread thread;
 	private static final int SPLASH = 0;
 	private static final int SETTINGS = 1;
 	private static final int FRAGMENT_COUNT = SETTINGS +1;
@@ -127,12 +130,12 @@ public class MainActivity extends FragmentActivity {
 				i.removeExtra("settings");
 			}else {
 				makeMeRequest(session);
-
 			}
 
 		} else if (state.isClosed()) {
 			// If the session state is closed:
 			// Show the login fragment
+
 			showFragment(SPLASH, false);
 		}
 
@@ -179,6 +182,28 @@ public class MainActivity extends FragmentActivity {
 						if(userDAO.getUserByAccount(user.getId()) == null){
 							userDAO.createUser(user);
 						}
+						if(updater == null || updater.getUserAccount()!=user.getId()){
+							updater = new DBUpdater(new MySQLiteHelper(MainActivity.this),user.getId());
+							if(thread == null){
+								thread = new Thread(updater);
+							}else if (thread.isAlive()) {
+								thread.interrupt();
+								thread = new Thread(updater);
+							}
+						}else {
+							if (thread == null || thread.isInterrupted()) {
+								thread = new Thread(updater);
+							}
+						}
+						thread.start();
+						//						if(updater == null){
+						//							updater = new DBUpdater(new MySQLiteHelper(MainActivity.this),user.getId());
+						//							if(thread == null){
+						//								thread = new Thread(updater);
+						//							}
+						//						}else if(updater.getUserAccount()!=user.getId()){
+						//							updater.setUserAccount(user.getId());
+						//						}
 					}
 					// If the session state is open:
 					Intent intent = new Intent(getApplicationContext(), MajorTabsActivity.class);

@@ -9,7 +9,9 @@ import android.app.Activity;
 import android.app.ListActivity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.ArrayAdapter;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 
 import com.facebook.Request;
 import com.facebook.Request.GraphUserListCallback;
@@ -23,9 +25,9 @@ import dao.RelationDAO;
 
 
 public class ShowMembersActivity extends ListActivity {
-	// ListView Adapter
-	ArrayAdapter<String> adapter;
-	Activity activity ;
+	//ListView Adapter
+	MemberListAdapter adapter;
+	Activity activity;
 	String groupName;
 	private UiLifecycleHelper uiHelper;
 	private Session.StatusCallback callback = 
@@ -46,8 +48,19 @@ public class ShowMembersActivity extends ListActivity {
 		activity = this;
 		getFriends(Session.getActiveSession());
 		groupName = this.getIntent().getStringExtra("groupName");
+		
+		
+		Button doneButton = (Button) findViewById(R.id.done);
+		doneButton.setOnClickListener(new OnClickListener()
+		{
+			@Override
+			public void onClick(View v)
+			{
+				finish();
+			} 
+		});
+		
 	}
-
 
 	private void onSessionStateChange(final Session session, SessionState sessionState, Exception ex){
 		if(session != null && session.isOpened()){
@@ -64,13 +77,13 @@ public class ShowMembersActivity extends ListActivity {
 						Response response) {
 					if (session == Session.getActiveSession()) {
 						HashSet<String> userIds = new RelationDAO(new DBHelper(activity.getApplicationContext())).getUserIdsByGroup(groupName);
-						List<String> friendList = new ArrayList<String>(users.size());
+						List<GraphUser> friendList = new ArrayList<GraphUser>();
 						for (GraphUser user: users) {
 							if(userIds.contains(user.getId())){
-								friendList.add(user.getName());
+								friendList.add(user);
 							}
 						}
-						adapter = new ArrayAdapter<String>(activity, R.layout.group_list_item, R.id.label, friendList);
+						adapter = new MemberListAdapter(activity, R.layout.group_list_item, friendList);
 						// Binding resources Array to ListAdapter
 						setListAdapter(adapter);
 					}
